@@ -58,19 +58,37 @@ ALIMAIL_CLIENT_ID=xxx ALIMAIL_CLIENT_SECRET=yyy node dist/index.js --list-tools
 
 命令行参数：`--http`、`--host`、`--port`、`--check`、`--list-tools`、`--version`、`--help`。
 
-### 方式二：Docker（本地构建）
+### 方式二：Docker
+
+镜像由 GitHub Actions 自动构建并发布到 GitHub Container Registry，支持 `linux/amd64` 和 `linux/arm64`：
+
+```bash
+docker pull ghcr.io/mfc-open/alimail-admin-mcp:latest
+```
+
+| 标签 | 含义 |
+|---|---|
+| `latest`、`X.Y.Z`、`X.Y`（`X` 从 1.0 开始） | 正式版本，在推送 `vX.Y.Z` 标签时发布 |
+| `main` | `main` 分支的最新构建 |
+| `sha-<短提交号>` | 对应某次提交的构建 |
+
+也可以在本地构建：
 
 ```bash
 docker build -t alimail-admin-mcp:local .
+```
 
+下文示例使用 GHCR 镜像。如果是本地构建，把镜像名换成 `alimail-admin-mcp:local` 即可。
+
+```bash
 # 验证凭证
-docker run --rm -e ALIMAIL_CLIENT_ID=xxx -e ALIMAIL_CLIENT_SECRET=yyy alimail-admin-mcp:local --check
+docker run --rm -e ALIMAIL_CLIENT_ID=xxx -e ALIMAIL_CLIENT_SECRET=yyy ghcr.io/mfc-open/alimail-admin-mcp:latest --check
 ```
 
 **stdio 模式**：由 MCP 客户端负责拉起容器，必须带 `-i`：
 
 ```bash
-docker run -i --rm -e ALIMAIL_CLIENT_ID -e ALIMAIL_CLIENT_SECRET alimail-admin-mcp:local
+docker run -i --rm -e ALIMAIL_CLIENT_ID -e ALIMAIL_CLIENT_SECRET ghcr.io/mfc-open/alimail-admin-mcp:latest
 ```
 
 **HTTP 模式**：作为常驻服务运行：
@@ -99,7 +117,7 @@ curl http://localhost:3000/healthz
     "alimail-admin": {
       "type": "stdio",
       "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "ALIMAIL_CLIENT_ID", "-e", "ALIMAIL_CLIENT_SECRET", "-e", "ALIMAIL_READ_ONLY", "alimail-admin-mcp:local"],
+      "args": ["run", "-i", "--rm", "-e", "ALIMAIL_CLIENT_ID", "-e", "ALIMAIL_CLIENT_SECRET", "-e", "ALIMAIL_READ_ONLY", "ghcr.io/mfc-open/alimail-admin-mcp:latest"],
       "env": {
         "ALIMAIL_CLIENT_ID": "${input:alimail-id}",
         "ALIMAIL_CLIENT_SECRET": "${input:alimail-secret}",
@@ -129,7 +147,7 @@ curl http://localhost:3000/healthz
   "mcpServers": {
     "alimail-admin": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "ALIMAIL_CLIENT_ID", "-e", "ALIMAIL_CLIENT_SECRET", "-e", "ALIMAIL_READ_ONLY", "alimail-admin-mcp:local"],
+      "args": ["run", "-i", "--rm", "-e", "ALIMAIL_CLIENT_ID", "-e", "ALIMAIL_CLIENT_SECRET", "-e", "ALIMAIL_READ_ONLY", "ghcr.io/mfc-open/alimail-admin-mcp:latest"],
       "env": {
         "ALIMAIL_CLIENT_ID": "xxx",
         "ALIMAIL_CLIENT_SECRET": "yyy",
@@ -231,6 +249,24 @@ test/                 单元测试与端到端测试（InMemory 及 HTTP）
 3. 在 `src/server.ts` 的 `ALL_TOOLS` 中注册。
 
 接口的字段、分页方式和所需权限，请以[官方文档](https://mailhelp.aliyun.com/docs/api/alibaba-mail-api)为准。
+
+### 发布
+
+[`.github/workflows/docker.yml`](./.github/workflows/docker.yml) 的行为：
+
+- **Pull Request**：运行测试，并构建镜像，但不推送。
+- **推送到 `main`**：测试通过后推送 `main` 和 `sha-*` 标签。
+- **推送 `v*` 标签**：推送版本号标签和 `latest`，同时附带构建来源证明（build provenance attestation）。
+
+发布新版本的步骤：
+
+```bash
+npm version 0.2.0 --no-git-tag-version   # 同步修改 package.json 和 CHANGELOG.md
+git commit -am "chore: release v0.2.0"
+git tag v0.2.0 && git push origin main v0.2.0
+```
+
+> 首次推送后，GHCR 上的包默认是**私有**的。如果要让别人免登录拉取，需要在仓库的 Packages → 包设置 → Change visibility 中改为 Public。
 
 ## 许可
 

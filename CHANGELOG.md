@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- GitHub Actions workflow that tests and builds multi-arch (amd64/arm64) Docker images and publishes them to `ghcr.io/mfc-open/alimail-admin-mcp`.
+
 ## 0.1.0
 
 - Initial release.
