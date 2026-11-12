@@ -1,0 +1,24 @@
+# Streamable HTTP deployment on the local machine.
+# Usage:
+#   cp .env.example .env   # fill in credentials
+#   docker compose up -d --build
+# MCP endpoint: http://localhost:3000/mcp
+services:
+  alimail-admin-mcp:
+    build: .
+    image: alimail-admin-mcp:local
+    command: ["--http"]
+    env_file: .env
+    ports:
+      # Publish on loopback only; change deliberately if other machines need access
+      # (then also set MCP_AUTH_TOKEN and MCP_ALLOWED_HOSTS).
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
