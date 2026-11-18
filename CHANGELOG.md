@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
 - New toolsets: `groups` (mail groups and members), `contacts` (shared contacts and folders, incl. folder tree), `org` (organization and domains), `security` (domain allow/block lists, quarantine), `audit` (audit log query) and opt-in `login` (passwordless login links, excluded from the default toolsets).
 - `users`: new `check_shared_access` tool.

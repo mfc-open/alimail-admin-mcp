@@ -1,6 +1,6 @@
 {
   "name": "@mfc-open/alimail-admin-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server for Alibaba Mail (阿里邮箱) admin OpenAPI — users, departments, mail groups, shared contacts, domains, quarantine and audit logs (unofficial)",
   "type": "module",
   "repository": {
