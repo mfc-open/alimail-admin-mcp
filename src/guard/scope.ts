@@ -36,4 +36,12 @@ export class DomainScope {
       );
     }
   }
+
+  assertDomain(domain: string, what = "域名"): void {
+    if (!this.isAllowed(`_@${domain}`)) {
+      throw new ScopeError(
+        `${what} ${domain} 不在允许的域名范围内（ALIMAIL_ALLOWED_DOMAINS=${this.allowed.join(",")}）`,
+      );
+    }
+  }
 }

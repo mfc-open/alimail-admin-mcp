@@ -1,7 +1,9 @@
 import { z } from "zod";
 
-export const TOOLSETS = ["users", "departments"] as const;
+export const TOOLSETS = ["users", "departments", "groups", "contacts", "org", "security", "audit", "login"] as const;
 export type Toolset = (typeof TOOLSETS)[number];
+/** `login` can hand out mailbox access links, so it must be enabled explicitly. */
+export const DEFAULT_TOOLSETS: Toolset[] = TOOLSETS.filter((t) => t !== "login");
 
 const boolish = (def: boolean) =>
   z
@@ -38,7 +40,7 @@ const EnvSchema = z.object({
     .optional()
     .transform((v) => (v ?? "https://alimail-cn.aliyuncs.com").replace(/\/+$/, "")),
   ALIMAIL_TOOLSETS: csv.transform((list, ctx) => {
-    if (list.length === 0) return [...TOOLSETS];
+    if (list.length === 0) return [...DEFAULT_TOOLSETS];
     if (list.includes("all")) return [...TOOLSETS];
     for (const t of list) {
       if (!(TOOLSETS as readonly string[]).includes(t)) {

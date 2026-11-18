@@ -16,6 +16,8 @@ export interface RequestOptions {
    * Defaults to true for GET/PUT/DELETE/PATCH and false for POST.
    */
   idempotent?: boolean;
+  /** Use "manual" to receive 3xx responses instead of following them (see `getRedirect`). */
+  redirect?: "follow" | "manual";
 }
 
 export interface AlimailClientOptions {
@@ -69,6 +71,11 @@ export class AlimailClient {
   delete<T = unknown>(path: string) {
     return this.request<T>({ method: "DELETE", path });
   }
+  /** GETs an endpoint that answers with an HTTP redirect and returns the target URL without following it. */
+  async getRedirect(path: string, query?: Record<string, QueryValue>): Promise<{ location?: string }> {
+    const r = await this.request<{ location?: string }>({ method: "GET", path, query, redirect: "manual" });
+    return { location: r.location };
+  }
 
   async request<T = unknown>(req: RequestOptions): Promise<T> {
     const idempotent = req.idempotent ?? req.method !== "POST";
@@ -89,6 +96,7 @@ export class AlimailClient {
             ...(req.body !== undefined ? { "Content-Type": "application/json" } : {}),
           },
           body: req.body !== undefined ? JSON.stringify(req.body) : undefined,
+          redirect: req.redirect ?? "follow",
           signal: AbortSignal.timeout(this.timeoutMs),
         });
       } catch (e) {
@@ -109,6 +117,11 @@ export class AlimailClient {
         ms: Date.now() - started,
         requestId,
       });
+
+      if (req.redirect === "manual" && res.status >= 300 && res.status < 400) {
+        await res.body?.cancel();
+        return { location: res.headers.get("location") ?? undefined } as T;
+      }
 
       if (res.ok) {
         const text = await res.text();

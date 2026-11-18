@@ -25,13 +25,14 @@ describe("tool registration", () => {
     expect(names).not.toContain("create_user");
     expect(names).not.toContain("delete_user");
     for (const t of tools) expect(t.annotations?.readOnlyHint).toBe(true);
-    expect(names).toHaveLength(11);
+    expect(names).toHaveLength(30);
   });
 
   it("exposes write and destructive tools with annotations when enabled", async () => {
     const { client } = await setup(new MockApi(), RW);
     const { tools } = await client.listTools();
-    expect(tools).toHaveLength(27);
+    expect(tools).toHaveLength(65);
+    expect(tools.map((t) => t.name)).not.toContain("create_login_link");
     const del = tools.find((t) => t.name === "delete_user")!;
     expect(del.annotations).toMatchObject({ destructiveHint: true, readOnlyHint: false });
     expect(Object.keys((del.inputSchema as { properties: object }).properties)).toEqual(
@@ -250,6 +251,158 @@ describe("departments tools", () => {
     expect((await call("get_department_chain", { ids: ["a", "b"] })).isError).toBe(false);
     expect(api.callsTo("POST", "/v2/departments/listChainsByIds")[0]!.body).toEqual({ ids: ["a", "b"] });
     expect((await call("get_department_chain", {})).isError).toBe(true);
+  });
+});
+
+describe("groups tools", () => {
+  it("resolves group IDs for domain scope and sends member batches", async () => {
+    const api = new MockApi()
+      .on("GET /v2/groups/:id", (c) =>
+        c.path.endsWith("/g-out") ? { id: "g-out", email: "all@other.com" } : { id: "g-in", email: "dev@x.com", itemCount: 3 },
+      )
+      .on("POST /v2/groups/:id/members/batchAdd", () => ({ successes: ["a@x.com"], failures: [] }));
+    const { call } = await setup(api, { ...RW, ALIMAIL_ALLOWED_DOMAINS: "x.com" });
+
+    const out = await call("add_group_members", { group: "g-out", members: ["a@x.com"] });
+    expect(out.data.error).toBe("ScopeError");
+
+    const ok = await call("add_group_members", { group: "g-in", members: ["a@x.com", "ext@partner.com"] });
+    expect(ok.isError).toBe(false);
+    expect(api.callsTo("POST", "/v2/groups/g-in/members/batchAdd")[0]!.body).toEqual({
+      members: ["a@x.com", "ext@partner.com"],
+    });
+  });
+
+  it("delete_group previews the group before deleting", async () => {
+    const api = new MockApi()
+      .on("GET /v2/groups/:id", () => ({ id: "g1", email: "dev@x.com", name: "Dev", itemCount: 3, type: "STATIC" }))
+      .on("DELETE /v2/groups/:id", () => ({}));
+    const { call } = await setup(api, RW);
+    const p = await call("delete_group", { group: "dev@x.com" });
+    expect(p.data.preview.target).toMatchObject({ email: "dev@x.com", memberCount: 3, type: "STATIC" });
+    expect(api.callsTo("DELETE", "/v2/groups/dev@x.com")).toHaveLength(0);
+    await call("delete_group", { group: "dev@x.com", confirm: true, confirmToken: p.data.confirmToken });
+    expect(api.callsTo("DELETE", "/v2/groups/dev@x.com")).toHaveLength(1);
+  });
+});
+
+describe("contacts tools", () => {
+  it("get_contact_folder_tree walks folders and attaches contacts", async () => {
+    const children: Record<string, { id: string; name: string }[]> = { r: [{ id: "f1", name: "Vendors" }], f1: [] };
+    const api = new MockApi()
+      .on("GET /v2/sharedContactFolders/$root", () => ({ id: "r", name: "Root" }))
+      .on("GET /v2/sharedContactFolders/:id/childFolders", (c) => {
+        const all = children[c.path.split("/")[3]!] ?? [];
+        return { folders: all, total: all.length };
+      })
+      .on("GET /v2/sharedContactFolders/:id/contacts", (c) => ({
+        contacts: [{ id: `c-${c.path.split("/")[3]}`, name: "N", email: "n@v.com", phone: "drop" }],
+        total: 1,
+      }));
+    const { call } = await setup(api);
+    const r = await call("get_contact_folder_tree", { includeContacts: true });
+    expect(r.data.nodeCount).toBe(2);
+    expect(r.data.tree.children[0]).toMatchObject({
+      id: "f1",
+      contacts: [{ id: "c-f1", name: "N", email: "n@v.com" }],
+      contactsTotal: 1,
+    });
+  });
+
+  it("create_shared_contact resolves $root and delete uses single or batch endpoint", async () => {
+    const api = new MockApi()
+      .on("GET /v2/sharedContactFolders/$root", () => ({ id: "r", name: "Root" }))
+      .on("POST /v2/sharedContacts", (c) => ({ id: "c1", ...(c.body as object) }))
+      .on("GET /v2/sharedContacts/:id", (c) => ({ id: c.path.split("/")[3], name: "N", email: "n@v.com" }))
+      .on("DELETE /v2/sharedContacts/:id", () => ({}))
+      .on("POST /v2/sharedContacts/batchDelete", () => ({ results: [] }));
+    const { call } = await setup(api, RW);
+    await call("create_shared_contact", { name: "N", email: "n@v.com", folderId: "$root" });
+    expect(api.callsTo("POST", "/v2/sharedContacts")[0]!.body).toMatchObject({ folderId: "r" });
+
+    for (const ids of [["c1"], ["c1", "c2"]]) {
+      const p = await call("delete_shared_contacts", { ids });
+      expect(p.data.preview.targets).toHaveLength(ids.length);
+      await call("delete_shared_contacts", { ids, confirm: true, confirmToken: p.data.confirmToken });
+    }
+    expect(api.callsTo("DELETE", "/v2/sharedContacts/c1")).toHaveLength(1);
+    expect(api.callsTo("POST", "/v2/sharedContacts/batchDelete")[0]!.body).toEqual({ ids: ["c1", "c2"] });
+  });
+});
+
+describe("org tools", () => {
+  it("delete_domain warns about the master domain and honors the domain scope", async () => {
+    const api = new MockApi().on("GET /v2/domains/:d", () => ({ id: "d1", domain: "x.com", isMaster: true }));
+    const { call } = await setup(api, { ...RW, ALIMAIL_ALLOWED_DOMAINS: "x.com" });
+    const p = await call("delete_domain", { domain: "x.com" });
+    expect(p.data.preview.willFail).toBeTruthy();
+    const out = await call("add_domain", { domain: "other.com" });
+    expect(out.data.error).toBe("ScopeError");
+    const sub = await call("verify_domain", { domain: "mail.x.com" });
+    expect(sub.data.error).not.toBe("ScopeError");
+  });
+});
+
+describe("security tools", () => {
+  it("add_allow_block_entries keeps only the value field for each entry type", async () => {
+    const api = new MockApi().on("POST /v2/messageRules/allowBlockLists", () => ({}));
+    const { call } = await setup(api, RW);
+    const bad = await call("add_allow_block_entries", { type: "BLOCK", entities: [{ type: "EMAIL", domain: "x.com" }] });
+    expect(bad.isError).toBe(true);
+    expect(bad.data.message).toMatch(/email/);
+
+    const args = {
+      type: "BLOCK",
+      entities: [
+        { type: "DOMAIN_NAME", domain: "spam.com", email: "ignored@x.com" },
+        { type: "IPV4ADDRESSRANGE", ipAddressRange: { begin: "1.1.1.1", end: "1.1.1.9" } },
+      ],
+    };
+    const p = await call("add_allow_block_entries", args);
+    expect(p.data.status).toBe("confirmation_required");
+    await call("add_allow_block_entries", { ...args, confirm: true, confirmToken: p.data.confirmToken });
+    expect(api.callsTo("POST", "/v2/messageRules/allowBlockLists")[0]!.body).toEqual({
+      type: "BLOCK",
+      entities: [
+        { type: "DOMAIN_NAME", domain: "spam.com" },
+        { type: "IPV4ADDRESSRANGE", ipAddressRange: { begin: "1.1.1.1", end: "1.1.1.9" } },
+      ],
+    });
+  });
+
+  it("quarantine tools check the mailbox scope and return the attachment redirect target", async () => {
+    const api = new MockApi().on(
+      "GET /v2/users/:e/quarantine/messages/:id/attachments/:aid/$value",
+      () => new Response(null, { status: 302, headers: { location: "https://dl.example/a?sig=1" } }),
+    );
+    const { call } = await setup(api, { ALIMAIL_ALLOWED_DOMAINS: "x.com" });
+    const out = await call("search_quarantine_messages", { email: "a@other.com" });
+    expect(out.data.error).toBe("ScopeError");
+    const r = await call("get_quarantine_attachment_url", { email: "a@x.com", id: "m1", attachmentId: "1" });
+    expect(r.data).toEqual({ location: "https://dl.example/a?sig=1" });
+  });
+});
+
+describe("audit and login tools", () => {
+  it("query_audit_logs serializes filter values as JSON arrays", async () => {
+    const api = new MockApi().on("POST /v2/reports", () => ({ hasMore: false, records: [] }));
+    const { call } = await setup(api);
+    await call("query_audit_logs", {
+      beginTimestamp: "2026-11-01T00:00:00Z",
+      endTimestamp: "2026-11-02T00:00:00Z",
+      filters: { ip: ["1.2.3.4", "5.6.7.8"] },
+    });
+    expect(api.calls[0]!.body).toMatchObject({ activities: ["*"], filters: { ip: '["1.2.3.4","5.6.7.8"]' } });
+  });
+
+  it("create_login_link is opt-in and requires confirmation", async () => {
+    const api = new MockApi().on("POST /v2/users/:e/passwordless/link", () => ({ link: "https://login" }));
+    const { client, call } = await setup(api, { ...RW, ALIMAIL_TOOLSETS: "login" });
+    expect((await client.listTools()).tools.map((t) => t.name)).toEqual(["create_login_link"]);
+    const p = await call("create_login_link", { email: "a@x.com" });
+    expect(p.data.status).toBe("confirmation_required");
+    const r = await call("create_login_link", { email: "a@x.com", confirm: true, confirmToken: p.data.confirmToken });
+    expect(r.data.link).toBe("https://login");
   });
 });
 

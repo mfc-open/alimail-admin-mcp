@@ -195,6 +195,29 @@ filter 支持字段：email、name、nickname、employeeNo、status、domain、e
     },
   }),
 
+  defineTool({
+    name: "check_shared_access",
+    title: "检查共享账号访问权限",
+    toolset: "users",
+    kind: "read",
+    description: "检查某用户是否可以访问指定的共享账号（例如秘书能否访问老板邮箱），返回 shared=true/false。",
+    inputSchema: {
+      user: userRef.describe("被检查的用户 ID 或邮箱（访问者）"),
+      sharedEmail: z.string().refine(isEmail, "invalid email").describe("共享账号邮箱（被访问者）"),
+      relations: z
+        .array(z.enum(["LOGIN", "SEND_AS", "SEND_ON_BEHALF"]))
+        .optional()
+        .describe("要检查的关系类型，多个值之间为 OR；不传则检查任意关系"),
+    },
+    handler: async (a, ctx) => {
+      await ensureUserAllowed(ctx, a.user);
+      return ctx.client.get(`${userPath(a.user)}/sharedWithMe`, {
+        sharedEmail: a.sharedEmail,
+        relations: a.relations?.join(","),
+      });
+    },
+  }),
+
   // ---------- write ----------
   defineTool({
     name: "create_user",

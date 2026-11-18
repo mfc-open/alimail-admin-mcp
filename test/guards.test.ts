@@ -82,7 +82,7 @@ describe("loadConfig", () => {
   it("applies safe defaults", () => {
     const c = loadConfig(base);
     expect(c.readOnly).toBe(true);
-    expect(c.toolsets).toEqual(["users", "departments"]);
+    expect(c.toolsets).toEqual(["users", "departments", "groups", "contacts", "org", "security", "audit"]);
     expect(c.apiBase).toBe("https://alimail-cn.aliyuncs.com");
     expect(c.http.host).toBe("127.0.0.1");
     expect(c.maxQps).toBe(20);
@@ -103,6 +103,7 @@ describe("loadConfig", () => {
   it("reports missing credentials and bad values", () => {
     expect(() => loadConfig({})).toThrow(ConfigError);
     expect(() => loadConfig({ ...base, ALIMAIL_TOOLSETS: "mail" })).toThrow(/unknown toolset/);
+    expect(loadConfig({ ...base, ALIMAIL_TOOLSETS: "all" }).toolsets).toContain("login");
     expect(() => loadConfig({ ...base, ALIMAIL_READ_ONLY: "maybe" })).toThrow(/invalid boolean/);
     expect(() => loadConfig({ ...base, ALIMAIL_MAX_QPS: "100" })).toThrow(ConfigError);
   });

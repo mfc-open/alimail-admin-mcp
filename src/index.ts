@@ -26,7 +26,7 @@ const HELP = `alimail-admin-mcp ${VERSION} — 阿里邮箱管理 MCP 服务（�
   ALIMAIL_CLIENT_ID / ALIMAIL_CLIENT_SECRET   应用凭证（必填）
   ALIMAIL_API_BASE        默认 https://alimail-cn.aliyuncs.com
   ALIMAIL_READ_ONLY       默认 true；设为 false 才会注册写操作工具
-  ALIMAIL_TOOLSETS        默认 users,departments
+  ALIMAIL_TOOLSETS        默认除 login 外的全部：users,departments,groups,contacts,org,security,audit
   ALIMAIL_ALLOWED_DOMAINS 限定可操作的邮箱域名，逗号分隔
   MCP_AUTH_TOKEN          HTTP 模式下要求 Authorization: Bearer <token>
 `;

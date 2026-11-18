@@ -2,6 +2,7 @@ import { z } from "zod";
 import { seg, type AlimailClient } from "../client/http.js";
 import { collectByOffset } from "../client/paginate.js";
 import { defineTool, ToolInputError, type AnyToolDef } from "./registry.js";
+import { buildTree } from "./tree.js";
 
 const deptId = z.string().min(1).describe("部门 ID；使用 $root 表示组织根部门");
 const select = z
@@ -51,77 +52,35 @@ export function listDepartmentUsers(client: AlimailClient, id: string, offset: n
   });
 }
 
-export interface TreeNode {
-  id: string;
-  name: string;
-  parentId?: string;
-  children: TreeNode[];
-  users?: { id?: string; email?: string; name?: string }[];
-  usersTotal?: number;
-  childrenTruncated?: boolean;
-}
-
 export async function buildDepartmentTree(
   client: AlimailClient,
   opts: { rootId?: string; maxDepth?: number; includeUsers?: boolean; maxNodes?: number; maxUsersPerDepartment?: number },
-): Promise<{ tree: TreeNode; nodeCount: number; truncated: boolean }> {
-  const maxDepth = opts.maxDepth ?? 10;
-  const maxNodes = opts.maxNodes ?? 2000;
+) {
   const maxUsers = opts.maxUsersPerDepartment ?? 200;
-  const rootDept = await client.get<Department>(deptPath(opts.rootId ?? "$root"));
-  const root: TreeNode = { id: rootDept.id, name: rootDept.name, parentId: rootDept.parentId, children: [] };
-  const seen = new Set<string>([root.id]);
-  let truncated = false;
-
-  const queue: { node: TreeNode; depth: number }[] = [{ node: root, depth: 0 }];
-  while (queue.length) {
-    const { node, depth } = queue.shift()!;
-
-    if (opts.includeUsers) {
-      const users = await collectByOffset(
-        async (offset, limit) => {
-          const r = await listDepartmentUsers(client, node.id, offset, limit);
-          return { items: r.users ?? [], total: r.total };
-        },
-        { maxItems: maxUsers },
-      );
-      node.users = users.items.map((u) => ({ id: u.id, email: u.email, name: u.name }));
-      node.usersTotal = users.total ?? users.items.length;
-      if (users.truncated) truncated = true;
-    }
-
-    if (depth >= maxDepth) {
-      node.childrenTruncated = true;
-      truncated = true;
-      continue;
-    }
-    const remaining = maxNodes - seen.size;
-    if (remaining <= 0) {
-      node.childrenTruncated = true;
-      truncated = true;
-      continue;
-    }
-    const subs = await collectByOffset(
-      async (offset, limit) => {
-        const r = await listSubDepartments(client, node.id, offset, limit);
-        return { items: r.departments ?? [], total: r.total };
-      },
-      { maxItems: remaining + 1 },
-    );
-    for (const d of subs.items) {
-      if (seen.has(d.id)) continue;
-      if (seen.size >= maxNodes) {
-        node.childrenTruncated = true;
-        truncated = true;
-        break;
-      }
-      seen.add(d.id);
-      const child: TreeNode = { id: d.id, name: d.name, parentId: d.parentId, children: [] };
-      node.children.push(child);
-      queue.push({ node: child, depth: depth + 1 });
-    }
-  }
-  return { tree: root, nodeCount: seen.size, truncated };
+  const root = await client.get<Department>(deptPath(opts.rootId ?? "$root"));
+  return buildTree({
+    root,
+    maxDepth: opts.maxDepth,
+    maxNodes: opts.maxNodes,
+    listChildren: async (id, offset, limit) => {
+      const r = await listSubDepartments(client, id, offset, limit);
+      return { items: r.departments ?? [], total: r.total };
+    },
+    visit: opts.includeUsers
+      ? async (node) => {
+          const users = await collectByOffset(
+            async (offset, limit) => {
+              const r = await listDepartmentUsers(client, node.id, offset, limit);
+              return { items: r.users ?? [], total: r.total };
+            },
+            { maxItems: maxUsers },
+          );
+          node.users = users.items.map((u) => ({ id: u.id, email: u.email, name: u.name }));
+          node.usersTotal = users.total ?? users.items.length;
+          return users.truncated;
+        }
+      : undefined,
+  });
 }
 
 export const departmentTools: AnyToolDef[] = [
