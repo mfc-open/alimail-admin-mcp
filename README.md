@@ -47,18 +47,28 @@
 
 ## 运行
 
-### 方式一：从源码运行
+### 方式一：npx（推荐）
+
+已发布到 npm：[`@mfc-open/alimail-admin-mcp`](https://www.npmjs.com/package/@mfc-open/alimail-admin-mcp)，需要 Node.js 20 或更高版本。
+
+```bash
+ALIMAIL_CLIENT_ID=xxx ALIMAIL_CLIENT_SECRET=yyy npx -y @mfc-open/alimail-admin-mcp --check   # 验证凭证（只换取 token，不调用业务接口）
+ALIMAIL_CLIENT_ID=xxx ALIMAIL_CLIENT_SECRET=yyy npx -y @mfc-open/alimail-admin-mcp --list-tools
+```
+
+也可以全局安装：`npm i -g @mfc-open/alimail-admin-mcp`，之后直接运行 `alimail-admin-mcp`。
+
+命令行参数：`--http`、`--host`、`--port`、`--check`、`--list-tools`、`--version`、`--help`。
+
+### 方式二：从源码运行
 
 ```bash
 npm ci
 npm run build
-ALIMAIL_CLIENT_ID=xxx ALIMAIL_CLIENT_SECRET=yyy node dist/index.js --check   # 验证凭证（只换取 token，不调用业务接口）
-ALIMAIL_CLIENT_ID=xxx ALIMAIL_CLIENT_SECRET=yyy node dist/index.js --list-tools
+ALIMAIL_CLIENT_ID=xxx ALIMAIL_CLIENT_SECRET=yyy node dist/index.js --check
 ```
 
-命令行参数：`--http`、`--host`、`--port`、`--check`、`--list-tools`、`--version`、`--help`。
-
-### 方式二：Docker
+### 方式三：Docker
 
 镜像由 GitHub Actions 自动构建并发布到 GitHub Container Registry，支持 `linux/amd64` 和 `linux/arm64`：
 
@@ -116,8 +126,8 @@ curl http://localhost:3000/healthz
   "servers": {
     "alimail-admin": {
       "type": "stdio",
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "ALIMAIL_CLIENT_ID", "-e", "ALIMAIL_CLIENT_SECRET", "-e", "ALIMAIL_READ_ONLY", "ghcr.io/mfc-open/alimail-admin-mcp:latest"],
+      "command": "npx",
+      "args": ["-y", "@mfc-open/alimail-admin-mcp"],
       "env": {
         "ALIMAIL_CLIENT_ID": "${input:alimail-id}",
         "ALIMAIL_CLIENT_SECRET": "${input:alimail-secret}",
@@ -128,7 +138,7 @@ curl http://localhost:3000/healthz
 }
 ```
 
-如果不用 Docker，把 `command`/`args` 换成 `"command": "node", "args": ["/绝对路径/alimail-admin-mcp/dist/index.js"]`。
+使用 Docker 时，把 `command`/`args` 换成 `"command": "docker", "args": ["run", "-i", "--rm", "-e", "ALIMAIL_CLIENT_ID", "-e", "ALIMAIL_CLIENT_SECRET", "-e", "ALIMAIL_READ_ONLY", "ghcr.io/mfc-open/alimail-admin-mcp:latest"]`；从源码运行时，换成 `"command": "node", "args": ["/绝对路径/alimail-admin-mcp/dist/index.js"]`。
 
 连接 HTTP 模式的服务：
 
@@ -146,8 +156,8 @@ curl http://localhost:3000/healthz
 {
   "mcpServers": {
     "alimail-admin": {
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "ALIMAIL_CLIENT_ID", "-e", "ALIMAIL_CLIENT_SECRET", "-e", "ALIMAIL_READ_ONLY", "ghcr.io/mfc-open/alimail-admin-mcp:latest"],
+      "command": "npx",
+      "args": ["-y", "@mfc-open/alimail-admin-mcp"],
       "env": {
         "ALIMAIL_CLIENT_ID": "xxx",
         "ALIMAIL_CLIENT_SECRET": "yyy",
@@ -257,6 +267,8 @@ test/                 单元测试与端到端测试（InMemory 及 HTTP）
 - **Pull Request**：运行测试，并构建镜像，但不推送。
 - **推送到 `main`**：测试通过后推送 `main` 和 `sha-*` 标签。
 - **推送 `v*` 标签**：推送版本号标签和 `latest`，同时附带构建来源证明（build provenance attestation）。
+
+[`.github/workflows/npm.yml`](./.github/workflows/npm.yml) 在推送 `v*` 标签时发布 npm 包：先校验标签与 `package.json` 版本一致，再通过 [Trusted Publishing](https://docs.npmjs.com/trusted-publishers)（OIDC，无需 `NPM_TOKEN`）发布，并附带 provenance。预发布版本（如 `0.2.0-beta.1`）使用 `next` 标签，不影响 `latest`。
 
 发布新版本的步骤：
 

@@ -3,6 +3,7 @@
 ## Unreleased
 
 - GitHub Actions workflow that tests and builds multi-arch (amd64/arm64) Docker images and publishes them to `ghcr.io/mfc-open/alimail-admin-mcp`.
+- Published to npm as `@mfc-open/alimail-admin-mcp` (run with `npx -y @mfc-open/alimail-admin-mcp`); GitHub Actions workflow publishes on `v*` tags via Trusted Publishing with provenance.
 
 ## 0.1.0
 

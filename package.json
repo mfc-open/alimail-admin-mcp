@@ -3,6 +3,17 @@
   "version": "0.1.0",
   "description": "MCP server for Alibaba Mail (阿里邮箱) admin OpenAPI — users and departments management (unofficial)",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mfc-open/alimail-admin-mcp.git"
+  },
+  "homepage": "https://github.com/mfc-open/alimail-admin-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/mfc-open/alimail-admin-mcp/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "alimail-admin-mcp": "dist/index.js"
   },
@@ -21,7 +32,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "start": "node dist/index.js",
-    "inspect": "npx @modelcontextprotocol/inspector node dist/index.js"
+    "inspect": "npx @modelcontextprotocol/inspector node dist/index.js",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "keywords": [
     "mcp",
