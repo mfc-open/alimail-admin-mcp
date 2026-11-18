@@ -1,0 +1,63 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.mfcompliance/alimail-admin-mcp",
+  "title": "Alibaba Mail Admin (unofficial)",
+  "description": "Manage Alibaba Mail (阿里邮箱) users, departments, groups and contacts via the admin OpenAPI",
+  "repository": {
+    "url": "https://github.com/mfcompliance/alimail-admin-mcp",
+    "source": "github"
+  },
+  "version": "0.2.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@mfcompliance/alimail-admin-mcp",
+      "version": "0.2.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "ALIMAIL_CLIENT_ID",
+          "description": "Alibaba Mail OpenAPI application client ID",
+          "isRequired": true,
+          "format": "string"
+        },
+        {
+          "name": "ALIMAIL_CLIENT_SECRET",
+          "description": "Alibaba Mail OpenAPI application client secret",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "ALIMAIL_READ_ONLY",
+          "description": "Set to false to register write and destructive tools",
+          "format": "boolean",
+          "default": "true",
+          "choices": [
+            "true",
+            "false"
+          ]
+        },
+        {
+          "name": "ALIMAIL_API_BASE",
+          "description": "API endpoint of your Alibaba Mail cluster",
+          "format": "string",
+          "default": "https://alimail-cn.aliyuncs.com"
+        },
+        {
+          "name": "ALIMAIL_TOOLSETS",
+          "description": "Comma-separated toolsets: users, departments, groups, contacts, org, security, audit, login, or all (default: all except login)",
+          "format": "string"
+        },
+        {
+          "name": "ALIMAIL_ALLOWED_DOMAINS",
+          "description": "Comma-separated mail domains the server is allowed to operate on (default: no restriction)",
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

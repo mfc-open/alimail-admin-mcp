@@ -1,15 +1,16 @@
 {
-  "name": "@mfc-open/alimail-admin-mcp",
-  "version": "0.2.0",
+  "name": "@mfcompliance/alimail-admin-mcp",
+  "version": "0.2.1",
+  "mcpName": "io.github.mfcompliance/alimail-admin-mcp",
   "description": "MCP server for Alibaba Mail (阿里邮箱) admin OpenAPI — users, departments, mail groups, shared contacts, domains, quarantine and audit logs (unofficial)",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mfc-open/alimail-admin-mcp.git"
+    "url": "git+https://github.com/mfcompliance/alimail-admin-mcp.git"
   },
-  "homepage": "https://github.com/mfc-open/alimail-admin-mcp#readme",
+  "homepage": "https://github.com/mfcompliance/alimail-admin-mcp#readme",
   "bugs": {
-    "url": "https://github.com/mfc-open/alimail-admin-mcp/issues"
+    "url": "https://github.com/mfcompliance/alimail-admin-mcp/issues"
   },
   "publishConfig": {
     "access": "public"
@@ -33,7 +34,8 @@
     "test": "vitest run",
     "start": "node dist/index.js",
     "inspect": "npx @modelcontextprotocol/inspector node dist/index.js",
-    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+    "prepublishOnly": "npm run typecheck && npm test && npm run build",
+    "version": "node scripts/sync-server-json.mjs && git add server.json"
   },
   "keywords": [
     "mcp",

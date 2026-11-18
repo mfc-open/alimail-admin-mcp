@@ -2,7 +2,7 @@
 
 基于[阿里邮箱开放平台 API](https://mailhelp.aliyun.com/docs/api/alibaba-mail-api) 的 MCP（Model Context Protocol）服务。在 Claude、VS Code Copilot、Cursor 等 AI 客户端里，用自然语言管理企业邮箱的**用户**、**部门**、**邮件组**、**公共通讯录**、**组织与域名**，以及**收信黑白名单**、**隔离区**和**审计日志**。
 
-> ⚠️ 本项目为**非官方**实现，与阿里云 / 阿里邮箱无隶属关系。它使用的应用凭证具有企业邮箱管理员级别的权限，请在充分理解风险后使用。
+> ⚠️ 本项目为**非官方**实现，与阿里云 / 阿里邮箱无隶属关系。它使用的应用凭证具有企业邮箱管理员级别的权限，请在充分理解风险后使用，并阅读[免责声明](#免责声明)。
 
 ## 特性
 
@@ -57,14 +57,14 @@
 
 ### 方式一：npx（推荐）
 
-已发布到 npm：[`@mfc-open/alimail-admin-mcp`](https://www.npmjs.com/package/@mfc-open/alimail-admin-mcp)，需要 Node.js 20 或更高版本。
+已发布到 npm：[`@mfcompliance/alimail-admin-mcp`](https://www.npmjs.com/package/@mfcompliance/alimail-admin-mcp)，同时收录于 [MCP Registry](https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.mfcompliance/alimail-admin-mcp)（`io.github.mfcompliance/alimail-admin-mcp`）。需要 Node.js 20 或更高版本。
 
 ```bash
-ALIMAIL_CLIENT_ID=xxx ALIMAIL_CLIENT_SECRET=yyy npx -y @mfc-open/alimail-admin-mcp --check   # 验证凭证（只换取 token，不调用业务接口）
-ALIMAIL_CLIENT_ID=xxx ALIMAIL_CLIENT_SECRET=yyy npx -y @mfc-open/alimail-admin-mcp --list-tools
+ALIMAIL_CLIENT_ID=xxx ALIMAIL_CLIENT_SECRET=yyy npx -y @mfcompliance/alimail-admin-mcp --check   # 验证凭证（只换取 token，不调用业务接口）
+ALIMAIL_CLIENT_ID=xxx ALIMAIL_CLIENT_SECRET=yyy npx -y @mfcompliance/alimail-admin-mcp --list-tools
 ```
 
-也可以全局安装：`npm i -g @mfc-open/alimail-admin-mcp`，之后直接运行 `alimail-admin-mcp`。
+也可以全局安装：`npm i -g @mfcompliance/alimail-admin-mcp`，之后直接运行 `alimail-admin-mcp`。
 
 命令行参数：`--http`、`--host`、`--port`、`--check`、`--list-tools`、`--version`、`--help`。
 
@@ -81,7 +81,7 @@ ALIMAIL_CLIENT_ID=xxx ALIMAIL_CLIENT_SECRET=yyy node dist/index.js --check
 镜像由 GitHub Actions 自动构建并发布到 GitHub Container Registry，支持 `linux/amd64` 和 `linux/arm64`：
 
 ```bash
-docker pull ghcr.io/mfc-open/alimail-admin-mcp:latest
+docker pull ghcr.io/mfcompliance/alimail-admin-mcp:latest
 ```
 
 | 标签 | 含义 |
@@ -100,13 +100,13 @@ docker build -t alimail-admin-mcp:local .
 
 ```bash
 # 验证凭证
-docker run --rm -e ALIMAIL_CLIENT_ID=xxx -e ALIMAIL_CLIENT_SECRET=yyy ghcr.io/mfc-open/alimail-admin-mcp:latest --check
+docker run --rm -e ALIMAIL_CLIENT_ID=xxx -e ALIMAIL_CLIENT_SECRET=yyy ghcr.io/mfcompliance/alimail-admin-mcp:latest --check
 ```
 
 **stdio 模式**：由 MCP 客户端负责拉起容器，必须带 `-i`：
 
 ```bash
-docker run -i --rm -e ALIMAIL_CLIENT_ID -e ALIMAIL_CLIENT_SECRET ghcr.io/mfc-open/alimail-admin-mcp:latest
+docker run -i --rm -e ALIMAIL_CLIENT_ID -e ALIMAIL_CLIENT_SECRET ghcr.io/mfcompliance/alimail-admin-mcp:latest
 ```
 
 **HTTP 模式**：作为常驻服务运行：
@@ -135,7 +135,7 @@ curl http://localhost:3000/healthz
     "alimail-admin": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@mfc-open/alimail-admin-mcp"],
+      "args": ["-y", "@mfcompliance/alimail-admin-mcp"],
       "env": {
         "ALIMAIL_CLIENT_ID": "${input:alimail-id}",
         "ALIMAIL_CLIENT_SECRET": "${input:alimail-secret}",
@@ -146,7 +146,7 @@ curl http://localhost:3000/healthz
 }
 ```
 
-使用 Docker 时，把 `command`/`args` 换成 `"command": "docker", "args": ["run", "-i", "--rm", "-e", "ALIMAIL_CLIENT_ID", "-e", "ALIMAIL_CLIENT_SECRET", "-e", "ALIMAIL_READ_ONLY", "ghcr.io/mfc-open/alimail-admin-mcp:latest"]`；从源码运行时，换成 `"command": "node", "args": ["/绝对路径/alimail-admin-mcp/dist/index.js"]`。
+使用 Docker 时，把 `command`/`args` 换成 `"command": "docker", "args": ["run", "-i", "--rm", "-e", "ALIMAIL_CLIENT_ID", "-e", "ALIMAIL_CLIENT_SECRET", "-e", "ALIMAIL_READ_ONLY", "ghcr.io/mfcompliance/alimail-admin-mcp:latest"]`；从源码运行时，换成 `"command": "node", "args": ["/绝对路径/alimail-admin-mcp/dist/index.js"]`。
 
 连接 HTTP 模式的服务：
 
@@ -165,7 +165,7 @@ curl http://localhost:3000/healthz
   "mcpServers": {
     "alimail-admin": {
       "command": "npx",
-      "args": ["-y", "@mfc-open/alimail-admin-mcp"],
+      "args": ["-y", "@mfcompliance/alimail-admin-mcp"],
       "env": {
         "ALIMAIL_CLIENT_ID": "xxx",
         "ALIMAIL_CLIENT_SECRET": "yyy",
@@ -339,17 +339,27 @@ test/                 单元测试与端到端测试（InMemory 及 HTTP）
 - **推送到 `main`**：测试通过后推送 `main` 和 `sha-*` 标签。
 - **推送 `v*` 标签**：推送版本号标签和 `latest`，同时附带构建来源证明（build provenance attestation）。
 
-[`.github/workflows/npm.yml`](./.github/workflows/npm.yml) 在推送 `v*` 标签时发布 npm 包：先校验标签与 `package.json` 版本一致，再通过 [Trusted Publishing](https://docs.npmjs.com/trusted-publishers)（OIDC，无需 `NPM_TOKEN`）发布，并附带 provenance。预发布版本（如 `0.2.0-beta.1`）使用 `next` 标签，不影响 `latest`。
+[`.github/workflows/npm.yml`](./.github/workflows/npm.yml) 在推送 `v*` 标签时发布 npm 包：先校验标签与 `package.json`、`server.json` 版本一致，再通过 [Trusted Publishing](https://docs.npmjs.com/trusted-publishers)（OIDC，无需 `NPM_TOKEN`）发布，并附带 provenance。预发布版本（如 `0.2.0-beta.1`）使用 `next` 标签，不影响 `latest`。如果该版本已在 npm 上，会跳过 npm 发布，因此重跑 workflow 是安全的。
+
+npm 发布成功后，同一个 workflow 会用 GitHub OIDC 登录 [MCP Registry](https://registry.modelcontextprotocol.io)，把 [`server.json`](./server.json) 发布为 `io.github.mfcompliance/alimail-admin-mcp`（预发布版本不发布）。Registry 通过 `package.json` 里的 `mcpName` 校验 npm 包归属，因此 `mcpName` 必须与 `server.json` 的 `name` 一致。
 
 发布新版本的步骤：
 
 ```bash
-npm version 0.2.0 --no-git-tag-version   # 同步修改 package.json 和 CHANGELOG.md
-git commit -am "chore: release v0.2.0"
-git tag v0.2.0 && git push origin main v0.2.0
+npm version 0.3.0 --no-git-tag-version   # 同步修改 package.json、package-lock.json 和 server.json；再手动更新 CHANGELOG.md
+git commit -am "chore: release v0.3.0"
+git tag v0.3.0 && git push origin main v0.3.0
 ```
 
 > 首次推送后，GHCR 上的包默认是**私有**的。如果要让别人免登录拉取，需要在仓库的 Packages → 包设置 → Change visibility 中改为 Public。
+
+## 免责声明
+
+- 本项目为社区开发的非官方工具，与阿里巴巴集团、阿里云及阿里邮箱无任何隶属、合作或背书关系。“阿里邮箱”“Alibaba Mail”等名称和商标归其各自所有者所有，本项目仅用于说明兼容对象。
+- 本软件按“原样”提供，不附带任何明示或默示的担保，详见 [MIT 许可](./LICENSE)。作者和贡献者不对因使用本软件导致的任何损失承担责任，包括数据丢失、账号误删或被停用、邮件服务中断、安全事件。
+- 写操作和破坏性操作可能由 AI 模型根据自然语言指令发起，模型可能误解指令或产生错误参数。两步确认、只读模式、域名限制等机制只能降低风险，不能完全消除风险。请先在测试域名或测试账号上验证，执行前仔细核对预览内容，并在生产环境中按最小权限原则配置应用权限。
+- 本工具会处理员工姓名、邮箱、手机号、登录记录等个人信息和企业数据。使用者应自行确保符合所在组织的内部制度和适用的法律法规，例如《个人信息保护法》《数据安全法》，并妥善保管应用凭证和审计日志。
+- 阿里邮箱开放平台的接口、权限和限额可能随时变化，以[官方文档](https://mailhelp.aliyun.com/docs/api/alibaba-mail-api)为准。
 
 ## 许可
 

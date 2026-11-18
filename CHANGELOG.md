@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Project moved to the `mfcompliance` GitHub organization. The npm package is now `@mfcompliance/alimail-admin-mcp` and the Docker image is `ghcr.io/mfcompliance/alimail-admin-mcp`; `@mfc-open/alimail-admin-mcp` is deprecated.
+- Listed on the MCP Registry as `io.github.mfcompliance/alimail-admin-mcp` (`server.json`, `mcpName`); the release workflow publishes to it after npm.
+
 ## 0.2.0
 
 - New toolsets: `groups` (mail groups and members), `contacts` (shared contacts and folders, incl. folder tree), `org` (organization and domains), `security` (domain allow/block lists, quarantine), `audit` (audit log query) and opt-in `login` (passwordless login links, excluded from the default toolsets).
